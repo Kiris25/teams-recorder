@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title> Evertec Meeting Recorder </title>
+<style>
+:root{--orange:#F37021;--orange-dark:#D85D0F;--bg:#f7f7f9;--text:#333;}
+body{font-family:Segoe UI,Arial,sans-serif;background:var(--bg);margin:0;padding:30px;color:var(--text)}
+.card{max-width:900px;margin:auto;background:#fff;border-radius:16px;padding:24px;box-shadow:0 4px 20px rgba(0,0,0,.1)}
+h1{color:var(--orange)}
+button{background:var(--orange);color:white;border:none;padding:12px 18px;border-radius:8px;margin:4px;cursor:pointer}
+button:disabled{background:#bbb}
+#rec{display:none;color:red;font-weight:bold}
+video{width:100%;background:#000;border-radius:10px;margin-top:15px}
+</style>
+</head>
+<body>
+<div class="card">
+<h1>🎥 Siscard Meeting Recorder (Prueba)</h1>
+<p>Permite validar si Edge puede capturar pantalla y audio.</p>
+<div><span id="rec">🔴 REC</span> <span id="timer">00:00:00</span></div>
+<button id="start">Iniciar Grabación</button>
+<button id="stop" disabled>Detener</button>
+<p id="status">Listo</p>
+<video id="preview" autoplay muted playsinline></video>
+</div>
+<script>
+let recorder,stream,chunks=[],startTime,timer;
+const startBtn=document.getElementById('start');
+const stopBtn=document.getElementById('stop');
+startBtn.onclick=async()=>{
+try{
+stream=await navigator.mediaDevices.getDisplayMedia({video:true,audio:true});
+document.getElementById('preview').srcObject=stream;
+chunks=[];
+recorder=new MediaRecorder(stream);
+recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};
+recorder.onstop=()=>{
+const blob=new Blob(chunks,{type:'video/webm'});
+const a=document.createElement('a');
+a.href=URL.createObjectURL(blob);
+a.download='grabacion_'+new Date().toISOString().replace(/[:.]/g,'-')+'.webm';
+a.click();
+};
+recorder.start();
+startTime=Date.now();
+timer=setInterval(()=>{
+let s=Math.floor((Date.now()-startTime)/1000);
+let h=String(Math.floor(s/3600)).padStart(2,'0');
+s%=3600;let m=String(Math.floor(s/60)).padStart(2,'0');
+let sec=String(s%60).padStart(2,'0');
+document.getElementById('timer').textContent=`${h}:${m}:${sec}`;
+},1000);
+document.getElementById('rec').style.display='inline';
+document.getElementById('status').textContent='Grabando. Si Edge muestra audio compartido, selecciónalo.';
+startBtn.disabled=true;stopBtn.disabled=false;
+}catch(e){document.getElementById('status').textContent='Error: '+e.message;}
+};
+stopBtn.onclick=()=>{
+recorder.stop();
+stream.getTracks().forEach(t=>t.stop());
+clearInterval(timer);
+document.getElementById('status').textContent='Grabación finalizada y descargada.';
+document.getElementById('rec').style.display='none';
+startBtn.disabled=false;stopBtn.disabled=true;
+};
+</script>
+</body></html>
